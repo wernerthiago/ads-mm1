@@ -39,6 +39,14 @@ public:
 		}
 		return k;
 	}
+
+	double rand_exp(double lambda){
+		double y = - 1 + ((double) rand() / (RAND_MAX)) + 1;
+		double x;
+
+		return x = -lambda*log(y);
+
+	}
 };
 
 class Task {
@@ -60,9 +68,9 @@ int main() {
 	double sim_time = 0.0;
 	double next_departure = HUGE_VAL;
 //	srand(clock());
-	double mean_arrival = 1.0;
-	double mean_processing = 2.0;
-	double next_arrival = stats.rand_poisson(mean_arrival);
+	double mean_arrival = 2.0;
+	double mean_processing = 1.0;
+	double next_arrival = stats.rand_exp(mean_arrival);
 //	double next_arrival = random.poisson(mean_arrival);
 	queue<Task> queue;
 
@@ -79,16 +87,14 @@ int main() {
 			cout << "	2-sim_time: " << sim_time << endl;
 			if (s == IDLE) {
 				s = BUSY;
-//				next_departure = sim_time + exp(mean_processing);
-				next_departure = sim_time + rand();
+				next_departure = sim_time + stats.rand_exp(mean_processing);
 				cout << "		3-next_departure: " << next_departure << endl;
 			} else {
 				Task task;
 				queue.push(task);
 				cout << "Tamanho da fila: " << queue.size() << endl;
 			}
-//			next_arrival = sim_time + exp(mean_arrival);
-			next_arrival = sim_time + rand();
+			next_arrival = sim_time + stats.rand_exp(mean_arrival);
 			cout << "			4-next_arrival: " << next_arrival << endl;
 		} else {
 			sim_time = next_departure;
@@ -100,8 +106,7 @@ int main() {
 			} else {
 				queue.pop();
 				cout << "Saindo..." << endl;
-//				next_departure = sim_time + exp(mean_processing);
-				next_departure = sim_time + rand();
+				next_departure = sim_time + stats.rand_exp(mean_processing);
 			}
 		}
 		last_event_time = sim_time;
