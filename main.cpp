@@ -9,7 +9,7 @@
 using namespace std;
 
 #define HUGE_VAL 1000000000000000000000000000000000000000000000000000000.0
-#define T_MAX 200.0
+#define T_MAX 1000.0
 static int ID = 0;
 
 enum Server {
@@ -32,16 +32,17 @@ public:
 
 class Statistics {
 private:
-	double arrivalA = 0.0;
-	double arrivalB = 0.0;
-	double arrivalTime = 0.0;
-	double departureTime = 0.0;
-	double requisitionInterval[100];
-	double firstArrival = 0.0;
-	double lastDeparture = 0.0;
-	double totalBusyTime = 0.0;
+	double arrivalA;
+	double arrivalB;
+	double arrivalTime;
+	double departureTime;
+	double requisitionInterval[1000000];
+	double firstArrival;
+	double lastDeparture;
+	double totalBusyTime;
 	int aux = 0;
-	MetodoCongruente crand = MetodoCongruente(1103515245,12345,2147483648,rand());
+	MetodoCongruente crandA = MetodoCongruente(1103515245,12345,2147483648,23);
+	MetodoCongruente crandB = MetodoCongruente(1103515245,12345,2147483648,17);
 
 public:
 	Statistics() {
@@ -72,12 +73,16 @@ public:
 		this->departureTime = value;
 	}
 
+	int getaux(){
+		return this->aux;
+	}
+
 	void update() {
 		requisitionInterval[aux] = arrivalB - arrivalA;
 		aux++;
 		arrivalA = 0.0;
 		arrivalB = 0.0;
-		departureTime = 0.0;
+		//departureTime = 0.0;
 	}
 	//intervalo entre requisições
 	double intervalMean(){
@@ -99,23 +104,26 @@ public:
 		while(i < h){
 			Task task = queue.front();
 			j = task.sim_time + j;
-			//cout << "task.sim_time: " << task.sim_time << endl;
-			//cout << "j: " << j << endl;
-			//cout << "h: " << h << endl;
 			queue.pop();
 			i++;
 		}
-		cout << "j: " << j << endl;
 		this->totalBusyTime = j;
 		return j/h;
 	}
-
+	//tempo medio do servico
 	float serviceMeanTime(){
 		return totalBusyTime/(lastDeparture-firstArrival);
 	}
+	//gerador A
+	double randA_exp(double lambda){
+		double y = - 1 + ((double) this->crandA.GeraNumeroAleatorio() / (RAND_MAX)) + 1;
+		double x;
 
-	double rand_exp(double lambda){
-		double y = - 1 + ((double) this->crand.GeraNumeroAleatorio() / (RAND_MAX)) + 1;
+		return x = -lambda*log(y);
+	}
+	//gerador B
+	double randB_exp(double lambda){
+		double y = - 1 + ((double) this->crandB.GeraNumeroAleatorio() / (RAND_MAX)) + 1;
 		double x;
 
 		return x = -lambda*log(y);
@@ -127,53 +135,52 @@ int main() {
 	Statistics stats;
 	double sim_time = 0.0;
 	double next_departure = HUGE_VAL;
-	double mean_arrival = 2.0;
-	double mean_processing = 0.775;
-	double next_arrival = stats.rand_exp(mean_arrival);
+	double mean_arrival = 1.0;
+	double mean_processing = 0.9;
+	double next_arrival = stats.randA_exp(mean_arrival);
 	stats.setfirstArrival(next_arrival);
 	queue<Task> queue;
 	std::queue<Task> queueStatistics;
+	int numberOfTasks = 0;
 
-	cout << "next_arrival: " << next_arrival << endl;
-	while (sim_time < T_MAX) {
-		if(!queue.empty()) stats.update();
+//	while (sim_time < T_MAX) {
+	while (numberOfTasks <= 10000) {
 		if (next_arrival < next_departure) {
 			sim_time = next_arrival;
 			stats.setarrivalA(next_arrival);
-			//cout << "Arrival A: " << next_arrival << endl;
 			if (s == IDLE) {
 				s = BUSY;
 				stats.setarrivalTime(next_arrival);
-				next_departure = sim_time + stats.rand_exp(mean_processing);
+				next_departure = sim_time + stats.randB_exp(mean_processing);
 				stats.setdepartureTime(next_departure);
 				cout << "BUSY" << endl;
 			} else {
 				Task task;
 				task.ID = ID++;
 				task.sim_time = sim_time;
+				numberOfTasks++;
 				queue.push(task);
 				cout << "Entrando: " << queue.size() << endl;
 			}
-			next_arrival = sim_time + stats.rand_exp(mean_arrival);
+			next_arrival = sim_time + stats.randA_exp(mean_arrival);
 			stats.setarrivalB(next_arrival);
-			//cout << "Arrival B: " << next_arrival << endl;
+			if(!queue.empty()) stats.update();
 		} else {
 			sim_time = next_departure;
 			if (queue.empty()) {
 				s = IDLE;
 				next_departure = HUGE_VAL;
 			} else {
-				Task task = queue.back();
+				Task task = queue.front();
 				task.sim_time = sim_time - task.sim_time;
 				queueStatistics.push(task);
 				queue.pop();
 				cout << "Saindo..." << endl;
-				next_departure = sim_time + stats.rand_exp(mean_processing);
+				next_departure = sim_time + stats.randB_exp(mean_processing);
 			}
 		}
 	}
-	cout << "next_departure: " << next_departure << endl;
-	stats.setlastDeparture(next_departure);
+	stats.setlastDeparture(sim_time);
 	cout << "1 - Intervalo medio de Tasks no sistema: " << stats.taskMean(queueStatistics) << endl;
 	cout << "2 - Intervalo medio de requisicoes: " << stats.intervalMean() << endl;
 	cout << "3 - Tempo médio de serviço: " << stats.serviceMeanTime() << endl;
